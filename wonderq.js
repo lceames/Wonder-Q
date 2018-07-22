@@ -14,7 +14,7 @@ class WonderQ {
   
     listen(listenPort, listenHost) {
         const server = net.createServer( (connection) => {
-            this.handleConnection(connection)
+            this.configureConnection(connection)
         });
 
         const listenParams = {
@@ -27,33 +27,37 @@ class WonderQ {
         });
     }
 
-    handleConnection(connection) {
-        connection.on('data', (data) => {
-            const msg = JSON.parse(data);
-            console.log(msg)
-            const queueName = msg["queueName"];            
-            
-            if (this.queues[queueName]) {
-                const operation = msg['operation'];
-                switch(operation) {
-                    case 'produceMessage':
-                        const messageBody = msg['messageBody'];
-                        this.produceMessage(connection, messageBody);
-                    case 'consumeMessage':
-                        const maxNumberOfMessages = msg['maxNumberOfMessages'];
-                        this.consumeMessages(connection, maxNumberOfMessages);
-                    case 'deleteMessage':
-                        const messageID = msg['messageID'];
-                        this.deleteMessage(connection, messageID);
-                    default:
-                        this.confirmTestSuccess(connection);
-                }
+    configureConnection(connection) {
+        connection.on('data', (data) => this.receiveData(connection, data));
+    }
+
+    receiveData(connection, data) {
+        console.log('message received');
+        const msg = JSON.parse(data);
+        const queueName = msg["queueName"];           
+        
+        if (this.queues[queueName]) {
+            const operation = msg['operation'];
+            switch(operation) {
+                case 'produceMessage':
+                    const messageBody = msg['messageBody'];
+                    this.produceMessage(connection, messageBody);
+                case 'consumeMessage':
+                    const maxNumberOfMessages = msg['maxNumberOfMessages'];
+                    this.consumeMessages(connection, maxNumberOfMessages);
+                case 'deleteMessage':
+                    const messageID = msg['messageID'];
+                    this.deleteMessage(connection, messageID);
+                default:
+                    this.confirmTestSuccess(connection);
             }
-            else {
-                const errorMsg = WonderQ.generateErrorMessage('Queue Not Found', `No queue named ${queueName} has been created`);
-                connection.write(errorMsg);
-            }
-        });
+        }
+        else {
+            const errorMsg = WonderQ.generateErrorMessage('Queue Not Found', `No queue named ${queueName} has been created`);
+            connection.write(errorMsg);
+
+            connection.end()
+        }
     }
 
     produceMessage(connection, messageBody) {
@@ -78,11 +82,11 @@ class WonderQ {
         connection.end();
     }
 
-    static generateErrorMessage(errorName, errorMessage) {
+    static generateErrorMessage(errorName, errorBody) {
         const errorMessage = {
             'status': 400,
             'error': errorName,
-            'msgBody': errorMessage
+            'msgBody': errorBody
         }
 
         return JSON.stringify(errorMessage);
@@ -94,6 +98,7 @@ class Queue {
     constructor(queueName, maxConsumerProcessTime) {
         this.queueName = queueName;
         this.maxConsumerProcessTime = maxConsumerProcessTime;
+        this.messages = [];
     }
 }
 
