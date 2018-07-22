@@ -11,7 +11,7 @@ function produceMessage(messageOptions, callback) {
 }
 
 function consumeMessages(messageOptions, callback, simulatedLatency = 0) {
-    const {queueName, maxNumberOfMessages, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
+    const {queueName, maxNumberOfMessages = 1, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
     const requestData = { 'maxNumberOfMessages': maxNumberOfMessages };
     const request = new WonderQRequest(queueName, 'consumeMessages', wonderQHost, wonderQPort, requestData, simulatedLatency);
     setClientInterval(request, callback); 
