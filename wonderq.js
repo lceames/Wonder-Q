@@ -14,10 +14,6 @@ class WonderQ {
         this.queues[queueName] = queue;
     }
 
-    deleteQueue() {
-        // Todo
-    }
-
     provideWonderQStatus(connection) {
         const response = {
             'requestSuccess': true,
