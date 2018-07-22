@@ -4,20 +4,84 @@ const net = require('net');
 class WonderQ {
     constructor(listenPort = 3000, listenHost = 'localhost') {
       this.queues = {};
-      this.connections = {};
-      this.messagesBeingConsumer = {};
       this.listen(listenPort, listenHost)
     }
+
+    // WonderQ hub actions
   
     createQueue(queueName, maxConsumerProcessTime = 1000) {
         const queue = new Queue(queueName, maxConsumerProcessTime);
         this.queues[queueName] = queue;
     }
-  
-    listen(listenPort, listenHost) {
-        const server = net.createServer( (connection) => {
-            this.configureConnection(connection)
+
+    deleteQueue() {
+        // Todo
+    }
+
+    provideWonderQStatus(connection) {
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': false,
+            'operation': 'getWonderQStatusReceipt',
+            'status': JSON.stringify({ 'queues': this.queues })
+        }
+        
+        connection.write(JSON.stringify(response));
+    }
+
+
+    // Wonder Q queue actions 
+
+    produceMessage(connection, queueName, newMessageID, newMessageBody) {
+        const queue = this.queues[queueName];
+        queue.messages.push({ 'messageID': newMessageID, 'messageBody': newMessageBody }); 
+        
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': true,
+            'messageID': newMessageID,
+            'operation': 'produceMessageReceipt'
+        }
+        
+        connection.write(JSON.stringify(response));
+    }
+
+    consumeMessages(connection, queueName, maxNumberOfMessages) {
+        const queue = this.queues[queueName];
+        const queueLength = queue.messages.length;
+        const toConsume = queue.messages.splice(queueLength - maxNumberOfMessages, queueLength);
+
+        const requestID = uuidv1();
+        queue.messagesAwaitingConsumption[requestID] = {}
+
+        toConsume.forEach(message => {
+            const messageID = message['messageID'];
+            queue.messagesAwaitingConsumption[requestID][messageID] = message;
         });
+        
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': false,
+            'operation': 'consumeMessagesReceipt',
+            'responseData': {
+                'messagesToConsume': toConsume,
+                'requestID': requestID
+            }
+        }
+        
+        
+        connection.write(JSON.stringify(response));
+        setTimeout(this.restoreUnconsumedMessagesToQueue.bind(this), queue.maxConsumerProcessTime, queueName, requestID);
+    }
+
+    deleteMessage(connectionID, messageID) {
+        // Todo
+    }
+
+    // configure and run server
+
+    listen(listenPort, listenHost) {
+        const server = net.createServer( (connection) => this.configureConnection(connection) );
 
         const listenParams = {
             host: listenHost,
@@ -33,13 +97,15 @@ class WonderQ {
         connection.on('data', (data) => this.receiveData(connection, data));
     }
 
+    // read request data
+
     receiveData(connection, data) {
         const msg = JSON.parse(data);
         const queueName = msg['queueName'];    
         const operation = msg['operation'];
                
         if (this.queues[queueName]) {
-            
+            const queue = this.queues[queueName];
             let messageID;
 
             switch(operation) {
@@ -49,6 +115,11 @@ class WonderQ {
                     this.produceMessage(connection, queueName, messageID, messageBody);
                     break;
                 case 'consumeMessages':
+                    if (queue.messages.length == 0) {
+                        WonderQ.generateErrorMessage(connection, `Queue contains no messages`);
+                        break;
+                    }
+
                     const maxNumberOfMessages = msg['requestData']['maxNumberOfMessages'];
                     this.consumeMessages(connection, queueName, maxNumberOfMessages);
                     break;
@@ -56,113 +127,71 @@ class WonderQ {
                     messageID = msg['messageID'];
                     this.deleteMessage(connection, messageID);
                     break;
-                case 'confirmMessageReceipt':
+                case 'confirmMessageConsumption':
                     const requestID = msg['requestData']['requestID'];
                     messageID = msg['requestData']['messageID'];
-                    this.confirmMessageReceipt(queueName, requestID, messageID);
+                    this.confirmMessageConsumption(connection, queueName, requestID, messageID);
                     break;
             }
-            console.log(this.queues[queueName]);
         }
         else if (operation == 'getWonderQStatus') {
             this.provideWonderQStatus(connection);
         }
         else {
-            const errorMsg = WonderQ.generateErrorMessage('Queue Not Found', `No queue named ${queueName} has been created`);
-            connection.write(errorMsg);
-
-            connection.end()
+            const errorMsg = WonderQ.generateErrorMessage(connection, `No queue named ${queueName} has been created`);
         }
     }
 
-    confirmMessageReceipt(queueName, requestID, messageID) {
-        const queue = this.queues[queueName];
-        delete queue[requestID][messageID];
-    }
+    // internal request handling
 
-    produceMessage(connection, queueName, newMessageID, newMessageBody) {
-        const queue = this.queues[queueName];
-        const newMessage = {
-            'messageID': newMessageID,
-            'messageBody': newMessageBody
+    confirmMessageConsumption(connection, queueName, requestID, messageID) {
+        const awaitingConsumption = this.queues[queueName]['messagesAwaitingConsumption'];
+        let response;
+
+        if (Object.keys(awaitingConsumption).length == 0) {
+            // consumption timeout detected 
+            response = {
+                'operation': 'messageConsumptionTimeout',
+                'requestSuccess': true,
+                'responseData': {
+                    'messageID': messageID
+                }
+            }
         }
-        queue.messages.push(newMessage); 
-        
-        const response = {
-            'requestSuccess': true,
-            'requestComplete': true,
-            'messageID': newMessageID,
-            'operation': 'produceMessage'
+        else {
+            delete awaitingConsumption[requestID][messageID];
+
+            response = {
+                'operation': 'confirmMessageConsumptionReceipt',
+                'requestSuccess': true
+            }
         }
-        
+
         connection.write(JSON.stringify(response));
     }
 
-    consumeMessages(connection, queueName, maxNumberOfMessages) {
-        const queue = this.queues[queueName];
-        const queueLength = queue.messages.length;
-        const toConsume = queue.messages.splice(queueLength - maxNumberOfMessages, queueLength);
-        const requestID = uuidv1();
-        queue.messagesAwaitingConsumption[requestID] = {}
-
-        toConsume.forEach(message => {
-            const messageID = message['messageID'];
-            queue.messagesAwaitingConsumption[requestID][messageID] = message;
-        });
-        
-        const response = {
-            'requestSuccess': true,
-            'requestComplete': false,
-            'operation': 'consumeMessages',
-            'messagesToConsume': toConsume
-        }
-        
-        connection.write(JSON.stringify(response));
-        setTimeout(this.restoreUnconsumedMessagesToQueue.bind(this), queue.maxConsumerProcessTime, queueName, requestID);
-    }
-
-    provideWonderQStatus(connection) {
-        const response = {
-            'requestSuccess': true,
-            'requestComplete': false,
-            'operation': 'wonderQStatus',
-            'status': JSON.stringify({ 'queues': this.queues })
-        }
-        
-        connection.write(JSON.stringify(response));
-    }
+    // message consumption timeout
 
     restoreUnconsumedMessagesToQueue(queueName, requestID) {
         const queue = this.queues[queueName];
         const unconsumedMessages = queue.messagesAwaitingConsumption[requestID];
-
-        for (var message in unconsumedMessages) {
-            queue.messages.push(message);
-        }
+        queue.messagesAwaitingConsumption = {};
+        
+        const messageIDs = Object.keys(unconsumedMessages);
+        messageIDs.forEach((messageID) => {
+            queue.messages.push(unconsumedMessages[messageID]);
+        })
     }
+    
+    // generic error handler
 
-    deleteMessage(connectionID, messageID) {
-
-    }
-
-    confirmTestSuccess(connection) {
-        const testSuccessMessage = {
-            'status': 200
-        };
-
-        connection.write(JSON.stringify(testSuccessMessage));
-
-        connection.end();
-    }
-
-    static generateErrorMessage(errorName, errorBody) {
-        const errorMessage = {
-            'status': 400,
-            'error': errorName,
-            'msgBody': errorBody
+    static generateErrorMessage(connection, errorMessage) {
+        const response = {
+            'requestSucess': false,
+            'errorMessage': errorMessage
         }
 
-        return JSON.stringify(errorMessage);
+        connection.write(JSON.stringify(response));
     }
   
 }

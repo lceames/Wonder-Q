@@ -1,57 +1,39 @@
 const net = require('net');
 const uuidv1 = require('uuid/v1');
 
-function produceMessage(messageOptions, callback) {
-    const {queueName, messageBody, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
-    const requestData = { 'messageBody': messageBody };
-    const request = new WonderQRequest(queueName, 'produceMessage', wonderQHost, wonderQPort, requestData);
 
+function setClientInterval(request, callback) {
     const interval = setInterval(() =>  { 
-        if (!request.alive) { 
-            clearInterval(interval) 
+        if (!request.alive) {
             if (request.success) {
                 callback(request.responseData);
             }
             else {
-                callback(null, request.error)
+                callback(null, request.errorMessage)
             }
+            clearInterval(interval) 
         }
     }, 250);
+}
+
+function produceMessage(messageOptions, callback) {
+    const {queueName, messageBody, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
+    const requestData = { 'messageBody': messageBody };
+    const request = new WonderQRequest(queueName, 'produceMessage', wonderQHost, wonderQPort, requestData);
+    setClientInterval(request, callback)
 }
 
 function consumeMessages(messageOptions, callback) {
     const {queueName, maxNumberOfMessages, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
     const requestData = { 'maxNumberOfMessages': maxNumberOfMessages };
     const request = new WonderQRequest(queueName, 'consumeMessages', wonderQHost, wonderQPort, requestData);
-
-    const interval = setInterval(() =>  { 
-        if (!request.alive) { 
-            clearInterval(interval) 
-            if (request.success) {
-                callback(request.responseData);
-            }
-            else {
-                callback(null, request.error)
-            }
-        }
-    }, 250);
+    setClientInterval(request, callback); 
 }
 
 function getWonderQStatus(messageOptions, callback) {
     const {queueName = null, messageBody, wonderQHost = "127.0.0.1", wonderQPort = 3000} = messageOptions;
     const request = new WonderQRequest(queueName, 'getWonderQStatus', wonderQHost, wonderQPort);
-
-    const interval = setInterval(() =>  { 
-        if (!request.alive) { 
-            clearInterval(interval) 
-            if (request.success) {
-                callback(request.responseData);
-            }
-            else {
-                callback(null, request.error)
-            }
-        }
-    }, 250);
+    setClientInterval(request, callback); 
 }
 
 function deleteMessage(messageID, queueName, wonderQHost = "127.0.0.1", wonderQPort = 3000) {
@@ -59,22 +41,14 @@ function deleteMessage(messageID, queueName, wonderQHost = "127.0.0.1", wonderQP
 }
 
 class WonderQRequest {
-    constructor(queueName, operation, host, port, requestData) {
-        const socket = net.connect(port, host);
-        socket.setTimeout(3000);
-        socket.on('timeout', () => {
-            console.log('socket timeout');
-            socket.end();
-        });
-        
-        this.socket = socket;
-        this.configureSocket(socket);
+    constructor(queueName, operation, host, port, requestData) {     
+        this.socket = net.connect(port, host);
+        this.configureSocket();
         this.alive = true;
         this.queueName = queueName
         this.operation = operation;
         this.requestData = requestData;
         this.connectionID = uuidv1();
-        this.consumptionQueue = [];
         this.responseData = {};
 
         const requestMessage = {
@@ -84,7 +58,7 @@ class WonderQRequest {
             'requestData': requestData
         }
 
-        socket.write(JSON.stringify(requestMessage))
+        this.socket.write(JSON.stringify(requestMessage))
     }
 
     configureSocket() {
@@ -97,7 +71,6 @@ class WonderQRequest {
         });
 
         this.socket.on('timeout', (error) => {
-            console.log('timeout')
             this.success = false;
             this.error = error
             this.alive = false;
@@ -105,40 +78,63 @@ class WonderQRequest {
         
     }
 
-    processMessage(message) {
+    async processMessage(message) {
         const messageID = message['messageID'];
         const messageBody = message['messageBody'];
-        this.responseData[messageID] = message[messageBody];
+
+        if (!this.responseData['messagesRead']) {  this.responseData['messagesRead'] = {} }
+        if (messageID == undefined) {
+            debugger;
+        }
+        this.responseData['messagesRead'][messageID] = messageBody;
+        
+        // simulate latency
+        await new Promise(resolve => setTimeout(resolve, 400));
 
         const confirmMessageReceipt = {
-            'operation': 'confirmMessageReceipt',
-            'messageID': messageID
+            'operation': 'confirmMessageConsumption',
+            'queueName': this.queueName,
+            'requestData': {
+                'requestID': this.requestID,
+                'messageID': messageID
+            }
         }
-
+        
         this.socket.write(JSON.stringify(confirmMessageReceipt));
     }
 
+    consumptionTimeout(messageID) {
+        delete this.responseData['messagesRead'][messageID];
+        this.responseData['warning'] = "Not all messages could be read within the queue's maxConsumerProcessTime";
 
+        this.socket.end();
+        this.success = true;
+        this.alive = false;
+    }
 
     receiveResponse(data) {
         const msg = JSON.parse(data);
         const success = msg['requestSuccess'];
-        // console.log(msg)
+        const operation = msg['operation'];
 
         if (success) {
-            switch(this.operation) {
-                case 'produceMessage':
+            switch(operation) {
+                case 'produceMessageReceipt':
                     this.responseData = msg;
                     this.socket.end();
                     this.success = true;
                     this.alive = false;
                     break;
-                case 'consumeMessages':
-                    const messagesToConsume = msg['messagesToConsume'];
-                    this.processMessage(messagesToConsume.shift());
+                case 'consumeMessagesReceipt':
+                    const messagesToConsume = msg['responseData']['messagesToConsume'];
+                    if (messagesToConsume.includes(undefined)) {
+                        debugger;
+                    }
                     this.consumptionQueue = messagesToConsume;
+                    this.requestID = msg['responseData']['requestID'];
+                    this.processMessage(messagesToConsume.shift());
                     break;
-                case 'confirmMessageReceipt':
+                case 'confirmMessageConsumptionReceipt':
                     if (this.consumptionQueue.length == 0) {
                         this.socket.end();
                         this.success = true;
@@ -148,7 +144,11 @@ class WonderQRequest {
                         this.processMessage(this.consumptionQueue.shift());
                     }
                     break;
-                case 'getWonderQStatus':
+                case 'messageConsumptionTimeout':
+                    const messageID = msg['responseData']['messageID'];
+                    this.consumptionTimeout(messageID);
+                    break;
+                case 'getWonderQStatusReceipt':
                     this.responseData = msg['status'];
                     this.socket.end();
                     this.success = true;
@@ -167,24 +167,3 @@ class WonderQRequest {
 
 module.exports = { produceMessage, consumeMessages, getWonderQStatus }
 
-
-
-
-// handleErrorMessage() {
-
-// }
-
-// // openWonderQConnection() {
-// //     const socketOptions = {
-// //         port: this.wonderQPort,
-// //         host: this.wonderQHost,
-// //     };
-
-// //     const conn = net.createConnection(socketOptions);
-// //     this.configureConnection()
-// //     return conn;
-// // }
-
-
-
-// new WonderQClient('tes').testConnection();

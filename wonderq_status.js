@@ -2,14 +2,12 @@ const { getWonderQStatus } = require('./wonderq_client');
 
 function printResults(data, err) {
     if (err) {
-        console.log('error');
         console.log(err);
     }
     else {
-        console.log('success');
         data = JSON.parse(data);
         queueNames = Object.keys(data['queues']);
-        console.log(`${queueNames.length} has been created`);
+        console.log(`${queueNames.length} queue has been created`);
         queueNames.forEach(queueName => {
             const queue = data['queues'][queueName];
             console.log("--------PRINTING INDIVIDUAL QUEUE STATE--------")
