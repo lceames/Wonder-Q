@@ -10,8 +10,8 @@ The queue is not a FIFO queue in that it does not guarantee first-in first-out o
 
 ### Class: WonderQ
 
-**new WonderQ(listenPort, listenHost)**
-```listenPort``` <number> **Default:** ```localhost```
+**new WonderQ(listenPort, listenHost)** <br/>
+```listenPort``` <number> **Default:** ```localhost``` <br/>
 ```listenHost``` <string> **Default:** ```'3000'```
 
 Initializes a WonderQ server listening for connections on the given ```listenPort``` and ```listenHost```
