@@ -1,8 +1,8 @@
 # WonderQ
 
-WonderQ is a messaging queue built on Node.js. It leverages Node's ```net``` module to allow full-duplex data transmission between the WonderQ hub, the broker responsible for storing the queues and processing queue alteration requests, and the Wonder-Q client, which provides the ability to produce and consume Wonder-Q messages. Full-duplex transmission is useful here because it allows the client and server to preserve a single connection for the multiple request-response cycles required for operations like ```consumeMessages```. 
+WonderQ is a messaging queue built on Node.js. It leverages Node's ```net``` module to allow full-duplex data transmission between a WonderQ hub, the broker responsible for storing queues and processing requests, and the Wonder-Q client, which provides the ability to produce and consume Wonder-Q messages. Full-duplex transmission is useful here because it allows the client and server to preserve a single connection throughout the multiple request-response cycles required for operations like ```consumeMessages```. 
 
-The ```net``` module allows WonderQ to ensure multiple consumers and processors can write to it simeltaneously. This functionality is also supported by WonderQ's internal design, which leverages subsudiary queues on both the client and server to ensure that messages are never duplicated if a transmission fails or times out. 
+The ```net``` module also allows WonderQ to ensure multiple consumers and processors can write to it simeltaneously. This functionality is native to the module and supported by WonderQ's internal design, which leverages subsudiary queues on both the client and server to ensure that messages are never duplicated if a transmission fails or times out. 
 
 The queue is not a FIFO queue in that it does not guarantee first-in first-out ordering. While this will usually be the case, transmission timeouts will cause the queue to occasionally provide messages out of the order in which they were received.
 
