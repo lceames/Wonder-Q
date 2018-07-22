@@ -6,9 +6,9 @@ The ```net``` module also allows WonderQ to ensure multiple consumers and proces
 
 The queue is not a FIFO queue in that it does not guarantee first-in first-out ordering. While this will usually be the case, transmission timeouts will cause the queue to occasionally provide messages out of the order in which they were received.
 
-##API
+## API
 
-###Class: WonderQ
+### Class: WonderQ
 
 **new WonderQ(listenPort, listenHost)**
 ```listenPort``` <number> **Default:** ```localhost```
@@ -24,7 +24,7 @@ Initializes a WonderQ server listening for connections on the given ```listenPor
 The ```maxConsumerProcessTime``` specififies how long the queue will wait for a consumer to process a given message. If this threshold is reached on a given ```consumeMessages``` API call before the consumer has confirmed processing with the WonderQ, the WonderQ will terminate the connection and restore unprocessed messages to the respective queue.
 
 
-###WonderQ Client
+### WonderQ Client
 
 **function produceMessage(messageOptions, callback)**
 
