@@ -4,6 +4,8 @@ const net = require('net');
 class WonderQ {
     constructor(listenPort = 3000, listenHost = 'localhost') {
       this.queues = {};
+      this.connections = {};
+      this.messagesBeingConsumer = {};
       this.listen(listenPort, listenHost)
     }
   
@@ -32,24 +34,30 @@ class WonderQ {
     }
 
     receiveData(connection, data) {
-        console.log('message received');
         const msg = JSON.parse(data);
-        const queueName = msg["queueName"];           
-        
+        const connectionID = msg['connectionID'];
+        const queueName = msg['queueName'];    
+
+        if (!this.connections[connectionID]) { this.connections[connectionID] = connection };
+               
         if (this.queues[queueName]) {
             const operation = msg['operation'];
+            console.log(operation);
+            const messageID;
+
             switch(operation) {
                 case 'produceMessage':
-                    const messageBody = msg['messageBody'];
-                    this.produceMessage(connection, messageBody);
+                    messageID = uuidv1();
+                    const messageBody = msg['requestData']['messageBody'];
+                    this.produceMessage(connection, queueName, messageID, messageBody);
                 case 'consumeMessage':
-                    const maxNumberOfMessages = msg['maxNumberOfMessages'];
+                    const maxNumberOfMessages = msg['requestData']['maxNumberOfMessages'];
                     this.consumeMessages(connection, maxNumberOfMessages);
                 case 'deleteMessage':
-                    const messageID = msg['messageID'];
+                    messageID = msg['messageID'];
                     this.deleteMessage(connection, messageID);
-                default:
-                    this.confirmTestSuccess(connection);
+                case 'confirmMessageReceipt':
+
             }
         }
         else {
@@ -60,15 +68,41 @@ class WonderQ {
         }
     }
 
-    produceMessage(connection, messageBody) {
-
+    produceMessage(connection, queueName, newMessageID, newMessageBody) {
+        const queue = this.queues[queueName];
+        console.log(queue);
+        const newMessage = {
+            'messageID': newMessageID,
+            'messageBody': newMessageBody
+        }
+        queue.messages.push(newMessage); 
+        
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': true,
+            'messageID': newMessageID,
+            'operation': 'produceMessage'
+        }
+        
+        connection.write(JSON.stringify(response));
     }
 
-    consumeMessages(connection, maxNumberOfMessages) {
+    consumeMessages(connectionID, maxNumberOfMessages) {
+        const queue = this.queues[queueName];
+        const toConsume = queue.splice(queue.length - maxNumberOfMessages, -1);
 
+        queue.messages.push(newMessage); 
+        
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': false,
+            'operation': 'consumeMessages',
+        }
+        
+        connection.write(JSON.stringify(response));
     }
 
-    deleteMessage(connection, messageID) {
+    deleteMessage(connectionID, messageID) {
 
     }
 
