@@ -35,30 +35,37 @@ class WonderQ {
 
     receiveData(connection, data) {
         const msg = JSON.parse(data);
-        const connectionID = msg['connectionID'];
         const queueName = msg['queueName'];    
-
-        if (!this.connections[connectionID]) { this.connections[connectionID] = connection };
+        const operation = msg['operation'];
                
         if (this.queues[queueName]) {
-            const operation = msg['operation'];
-            console.log(operation);
-            const messageID;
+            
+            let messageID;
 
             switch(operation) {
                 case 'produceMessage':
                     messageID = uuidv1();
                     const messageBody = msg['requestData']['messageBody'];
                     this.produceMessage(connection, queueName, messageID, messageBody);
-                case 'consumeMessage':
+                    break;
+                case 'consumeMessages':
                     const maxNumberOfMessages = msg['requestData']['maxNumberOfMessages'];
-                    this.consumeMessages(connection, maxNumberOfMessages);
+                    this.consumeMessages(connection, queueName, maxNumberOfMessages);
+                    break;
                 case 'deleteMessage':
                     messageID = msg['messageID'];
                     this.deleteMessage(connection, messageID);
+                    break;
                 case 'confirmMessageReceipt':
-
+                    const requestID = msg['requestData']['requestID'];
+                    messageID = msg['requestData']['messageID'];
+                    this.confirmMessageReceipt(queueName, requestID, messageID);
+                    break;
             }
+            console.log(this.queues[queueName]);
+        }
+        else if (operation == 'getWonderQStatus') {
+            this.provideWonderQStatus(connection);
         }
         else {
             const errorMsg = WonderQ.generateErrorMessage('Queue Not Found', `No queue named ${queueName} has been created`);
@@ -68,9 +75,13 @@ class WonderQ {
         }
     }
 
+    confirmMessageReceipt(queueName, requestID, messageID) {
+        const queue = this.queues[queueName];
+        delete queue[requestID][messageID];
+    }
+
     produceMessage(connection, queueName, newMessageID, newMessageBody) {
         const queue = this.queues[queueName];
-        console.log(queue);
         const newMessage = {
             'messageID': newMessageID,
             'messageBody': newMessageBody
@@ -87,19 +98,47 @@ class WonderQ {
         connection.write(JSON.stringify(response));
     }
 
-    consumeMessages(connectionID, maxNumberOfMessages) {
+    consumeMessages(connection, queueName, maxNumberOfMessages) {
         const queue = this.queues[queueName];
-        const toConsume = queue.splice(queue.length - maxNumberOfMessages, -1);
+        const queueLength = queue.messages.length;
+        const toConsume = queue.messages.splice(queueLength - maxNumberOfMessages, queueLength);
+        const requestID = uuidv1();
+        queue.messagesAwaitingConsumption[requestID] = {}
 
-        queue.messages.push(newMessage); 
+        toConsume.forEach(message => {
+            const messageID = message['messageID'];
+            queue.messagesAwaitingConsumption[requestID][messageID] = message;
+        });
         
         const response = {
             'requestSuccess': true,
             'requestComplete': false,
             'operation': 'consumeMessages',
+            'messagesToConsume': toConsume
         }
         
         connection.write(JSON.stringify(response));
+        setTimeout(this.restoreUnconsumedMessagesToQueue.bind(this), queue.maxConsumerProcessTime, queueName, requestID);
+    }
+
+    provideWonderQStatus(connection) {
+        const response = {
+            'requestSuccess': true,
+            'requestComplete': false,
+            'operation': 'wonderQStatus',
+            'status': JSON.stringify({ 'queues': this.queues })
+        }
+        
+        connection.write(JSON.stringify(response));
+    }
+
+    restoreUnconsumedMessagesToQueue(queueName, requestID) {
+        const queue = this.queues[queueName];
+        const unconsumedMessages = queue.messagesAwaitingConsumption[requestID];
+
+        for (var message in unconsumedMessages) {
+            queue.messages.push(message);
+        }
     }
 
     deleteMessage(connectionID, messageID) {
@@ -133,6 +172,7 @@ class Queue {
         this.queueName = queueName;
         this.maxConsumerProcessTime = maxConsumerProcessTime;
         this.messages = [];
+        this.messagesAwaitingConsumption = {};
     }
 }
 
