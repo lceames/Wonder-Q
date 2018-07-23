@@ -14,7 +14,7 @@ To demo WonderQ take the following steps:
 
 2.) Open up three terminal windows
 
-3.) Enter ```node start_wonderq.js``` in one of them. This script simply starts a WonderQ hub instance in a seperate process. This is helpful because it will allow you to moduate the growth trajectory of the queue without starting a new hub. This is required because this project abstracts logic related to persisting data through storage. Each WonderQ hub lasts only as long as the process calling it. 
+3.) Enter ```node start_wonderq.js``` in one of them. This script simply starts a WonderQ hub instance in a seperate process. This is helpful because it will allow you to moduate the growth trajectory of the queue without starting a new hub. This is required because this project abstracts logic related to data persistence. Each WonderQ hub lasts only as long as the process calling it. 
 
 4.) Enter ```node wonderq_status.js``` in another of them. This is the 'quick and dirty developer tool' that continuously monitors the state of the WonderQ. It will update the terminal windows as messages flow in and out of the Wonder Q. 
 
@@ -59,7 +59,7 @@ Consume message or messages from WonderQ queue.
 * ```wonderQHost```<string> Host address of WonderQ hub **Default:** 127.0.0.1
 * ```wonderQPort``` <number> Bound port of WonderQ hub **Default:** 3000 <br/>
 
-```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required**
+```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required** <br/>
 ```simulatedLatency``` Optional parameter that will simulate latency for message processing. Helpful for testing ```maxConsumerProcessTime``` functionality.
 
 
@@ -70,6 +70,9 @@ Query state of a WonderQ hub
 * ```wonderQPort``` <number> Bound port of WonderQ hub **Default:** 3000 <br/>
 
 ```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required**
+
+## Scaling Discussion
+
 
 
 ## Todo
