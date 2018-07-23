@@ -173,10 +173,13 @@ class WonderQ {
         const unconsumedMessages = queue.messagesAwaitingConsumption[requestID];
         queue.messagesAwaitingConsumption = {};
         
-        const messageIDs = Object.keys(unconsumedMessages);
-        messageIDs.forEach((messageID) => {
-            queue.messages.push(unconsumedMessages[messageID]);
-        })
+        try {
+            const messageIDs = Object.keys(unconsumedMessages);
+            messageIDs.forEach((messageID) => {
+                queue.messages.push(unconsumedMessages[messageID]);
+            });
+        }
+        catch {}
     }
     
     // generic error handler
@@ -201,5 +204,6 @@ class Queue {
     }
 }
 
-new WonderQ().createQueue('test');
+module.exports = { WonderQ }
+
 
