@@ -10,6 +10,8 @@ function callback(data, err) {
 }
 
 const trend = process.argv[2];
+const simLatency = process.argv[3] == "sim-latency" ? 200 : 0;
+console.log(simLatency);
 let produceInterval;
 let consumeInterval;
 
@@ -22,7 +24,7 @@ switch(trend) {
         produceInterval = 100;
         consumeInterval = 300;
         break;
-    default:
+    case 'default':
         produceInterval = 100;
         consumeInterval = 300;
 }
@@ -39,7 +41,7 @@ const consumeMessageOptions = {
 
 setInterval(() => produceMessage(produceMessageOptions, callback), produceInterval);
 
-setInterval(() => consumeMessages(consumeMessageOptions, callback), consumeInterval);
+setInterval(() => consumeMessages(consumeMessageOptions, callback, simLatency), consumeInterval);
 
 
 
