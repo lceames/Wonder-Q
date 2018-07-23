@@ -6,14 +6,18 @@ The ```net``` module also allows WonderQ to ensure multiple consumers and proces
 
 The queue is not a FIFO queue in that it does not guarantee first-in first-out ordering. While this will usually be the case, transmission timeouts will cause the queue to occasionally provide messages out of the order in which they were received.
 
-##Demo 
+## Demo 
 
 To demo WonderQ take the following steps:
 
 1.) Clone this repo and navigate into the directory
+
 2.) Open up three terminal windows
+
 3.) Enter ```node start_wonderq.js``` in one of them. This script simply starts a WonderQ hub instance in a seperate process. This is helpful because it will allow you to moduate the growth trajectory of the queue without starting a new hub. This is required because this project abstracts logic related to persisting data through storage. Each WonderQ hub lasts only as long as the process calling it. 
+
 4.) Enter ```node wonderq_status.js``` in another of them. This is the 'quick and dirty developer tool' that continuously monitors the state of the WonderQ. It will update the terminal windows as messages flow in and out of the Wonder Q. 
+
 5.) Finally, use the last terminal window to run ```node test_app.js```. This script will set two node intervals that will make periodic API calls to ```produceMessage``` and ```consumeMessages```. You can modulate the growth trajectory of the script by adding a third command line argument(```node test_app.js grow``` or ```node test_app.js shrink```). If you choose 'grow', the intervals will be set such that more messages are flowing into the queue that out. 'Shrink' will do the opposite. The default setting will cause about the same amount of messages to flow in and out of the queue. The script will also print to the screen a continuous stream of API calls results.
 
 ## API
