@@ -1,6 +1,6 @@
 # WonderQ
 
-WonderQ is a messaging queue built on Node.js. It leverages Node's ```net``` module to allow full-duplex data transmission between a WonderQ hub, the broker responsible for storing queues and processing requests, and the Wonder-Q client, which provides the ability to produce and consume Wonder-Q messages. Full-duplex transmission is useful here because it allows the client and server to preserve a single connection throughout the multiple request-response cycles required for operations like ```consumeMessages```. 
+WonderQ is a messaging queue built on Node.js. It leverages Node's ```net``` module to allow full-duplex data transmission between a WonderQ hub, the broker responsible for storing queues and processing requests, and the Wonder-Q client, which provides the ability to produce and consume WonderQ messages. Full-duplex transmission is useful here because it allows the client and server to preserve a single connection throughout the multiple request-response cycles required for operations like ```consumeMessages```. 
 
 The ```net``` module also allows WonderQ to ensure multiple consumers and processors can write to it simeltaneously. This functionality is native to the module and supported by WonderQ's internal design, which leverages subsudiary queues on both the client and server to ensure that messages are never duplicated if a transmission fails or times out. 
 
@@ -20,7 +20,7 @@ To demo WonderQ take the following steps:
 
 4.) Execute ```node wonderq_status.js``` in another of them. This is the 'quick and dirty developer tool' that continuously monitors the state of WonderQ. It will update the terminal window as messages flow in and out of the demo WonderQ. 
 
-5.) Finally, use the last terminal window to run ```node test_app.js default```. This script will create two intervals that make periodic API calls to ```produceMessage``` and ```consumeMessages``` respectively. You can modulate the growth trajectory of WonderQ by adding a third command line argument(```node test_app.js grow``` or ```node test_app.js shrink```). If you choose ```grow```, the interval values will ensure more messages are flowing into the queue that out. ```shrink``` will do the opposite. The default setting will cause about the same amount of messages to flow in and out of the queue. You can simulate message process latency with ```node start_wonderq.js [default/grow/shrink] sim-latency```. This will direct the demo WonderQ client to take unncessarily long to process consumed messages, and trigger the WonderQ's ```maxConsumerProcessTime``` functionality. The script will also print to the window a continuous stream of API call results. You can note the effects of the ```sim-latency``` switch by reading through some of these results.
+5.) Finally, use the last terminal window to run ```node test_app.js default```. This script will initiate two intervals that make periodic API calls to ```produceMessage``` and ```consumeMessages``` respectively. You can modulate the growth trajectory of WonderQ by adding a third command line argument(```node test_app.js grow``` or ```node test_app.js shrink```). If you choose ```grow```, the interval values will ensure more messages are flowing into the queue that out. ```shrink``` will do the opposite. The default setting will cause about the same amount of messages to flow in and out of the queue. You can simulate message process latency with ```node start_wonderq.js [default/grow/shrink] sim-latency```. This will direct the demo WonderQ client to take unncessarily long to process consumed messages, and trigger the WonderQ's ```maxConsumerProcessTime``` functionality. The script will also print to the window a continuous stream of API call results. You can note the effects of the ```sim-latency``` switch by reading through some of these results.
 
 ## API
 
@@ -81,6 +81,7 @@ One issue with the in-memory solution could be sudden spikes in positive queue t
 
 
 ## Todo
+- [ ] Persist queue data
 - [ ] Add FIFO queue functionality
 - [ ] Encrypt and authenticate bidirectional data transmission between WonderQ hub and WonderQ client
 - [ ] Expand API for deleting queues and deleting messages
