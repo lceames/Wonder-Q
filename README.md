@@ -10,15 +10,15 @@ The queue is not a FIFO queue in that it does not guarantee first-in first-out o
 
 To demo WonderQ take the following steps:
 
-1.) Clone this repo and navigate into the directory
+1.) Clone this repo and navigate into the directory.
 
-2.) Open up three terminal windows
+2.) Open three terminal windows.
 
-3.) Enter ```node start_wonderq.js``` in one of them. This script simply starts a WonderQ hub instance in a seperate process. This is helpful because it will allow you to moduate the growth trajectory of the queue without starting a new hub. This is required because this project abstracts logic related to data persistence. Each WonderQ hub lasts only as long as the process calling it. 
+3.) Execute ```node start_wonderq.js``` in one of them. This script simply starts a WonderQ hub instance in a seperate process. This is helpful because it will allow you to moduate the growth trajectory of the queue without starting a new hub. A new hub would be required because this project abstracts logic related to data persistence. Each WonderQ hub lasts only as long as the process calling it. 
 
-4.) Enter ```node wonderq_status.js``` in another of them. This is the 'quick and dirty developer tool' that continuously monitors the state of the WonderQ. It will update the terminal windows as messages flow in and out of the Wonder Q. 
+4.) Execute ```node wonderq_status.js``` in another of them. This is the 'quick and dirty developer tool' that continuously monitors the state of the WonderQ. It will update the terminal window as messages flow in and out of the Wonder Q. 
 
-5.) Finally, use the last terminal window to run ```node test_app.js```. This script will set two node intervals that will make periodic API calls to ```produceMessage``` and ```consumeMessages```. You can modulate the growth trajectory of the script by adding a third command line argument(```node test_app.js grow``` or ```node test_app.js shrink```). If you choose 'grow', the intervals will be set such that more messages are flowing into the queue that out. 'Shrink' will do the opposite. The default setting will cause about the same amount of messages to flow in and out of the queue. The script will also print to the screen a continuous stream of API calls results.
+5.) Finally, use the last terminal window to run ```node test_app.js```. This script will create two intervals that make periodic API calls to ```produceMessage``` and ```consumeMessages``` respectively. You can modulate the growth trajectory of WonderQ by adding a third command line argument(```node test_app.js grow``` or ```node test_app.js shrink```). If you choose ```grow```, the interval values will ensure more messages are flowing into the queue that out. ```shrink``` will do the opposite. The default setting will cause about the same amount of messages to flow in and out of the queue. The script will also print to the window a continuous stream of API call results.
 
 ## API
 
@@ -73,6 +73,9 @@ Query state of a WonderQ hub
 
 ## Scaling Discussion
 
+One approach to scaling this project would be leveraging an extremely fast data structure store like a Redis cache. As volume increases, it will become increasingly important to minimize the amount of time each read/write to the message queue takes. A Redis cache would provide this speed because it stores data in memory and uses a publisher-subscriber data structure. This solution may be preferable to a distributed solution due to the message queue's need for synchronicity across nodes. Since the system provide FIFO functionality at least most of the time, an approach like distributed containers could cause reliability issues.
+
+One issue with the in-memory solution could be sudden spikes in positive queue traffic, or just general queue size growth. If the message queue's size grows so large that in no longer fits in memory, the system would obviously have a problem. One solution to this problem could be writing the newest messages to disk when in-memory storage reached capacity. This would theoretically prevent the system from failing to read new messages while retaining speed on the consumption side. Perhaps an independent process could be responsible for querying and transmitting data from hard disk to in-memory cache as messages are consumed. 
 
 
 ## Todo

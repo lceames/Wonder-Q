@@ -1,0 +1,23 @@
+{
+  "name": "wonder_q",
+  "version": "1.0.0",
+  "description": "WonderQ is a messaging queue built on Node.js. It leverages Node's ```net``` module to allow full-duplex data transmission between a WonderQ hub, the broker responsible for storing queues and processing requests, and the Wonder-Q client, which provides the ability to produce and consume Wonder-Q messages. Full-duplex transmission is useful here because it allows the client and server to preserve a single connection throughout the multiple request-response cycles required for operations like ```consumeMessages```.",
+  "main": "start_wonderq.js",
+  "dependencies": {
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lceames/Wonder-Q.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lceames/Wonder-Q/issues"
+  },
+  "homepage": "https://github.com/lceames/Wonder-Q#readme"
+}
