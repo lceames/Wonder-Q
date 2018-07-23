@@ -28,10 +28,11 @@ The ```maxConsumerProcessTime``` specififies how long the queue will wait for a 
 
 **function produceMessage(messageOptions, callback)** <br/>
 ```messageOptions``` <object> 
-* queueName <string> Indicates which queue to modify within WonderQ hub **required**
-* messageBody <string> The message text of the new message **required**
-* wonderQHost <string> Host address of WonderQ hub **Default:** 127.0.0.1
-* wonderQPort <number> Bound port of WonderQ hub **Default:** 3000 <br/>
+* ```queueName``` <string> Indicates which queue to modify within WonderQ hub **required**
+* ```messageBody``` <string> The message text of the new message **required**
+* ```wonderQHost``` <string> Host address of WonderQ hub **Default:** 127.0.0.1
+* ```wonderQPort``` <number> Bound port of WonderQ hub **Default:** 3000 <br/>
+
 ```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required** <br/>
 
 Produce message to WonderQ queue.
@@ -43,6 +44,7 @@ Consume message or messages from WonderQ queue.
 * ```maxNumberOfMessages``` <number> The message text of the new message **Default:** 1
 * ```wonderQHost```<string> Host address of WonderQ hub **Default:** 127.0.0.1
 * ```wonderQPort``` <number> Bound port of WonderQ hub **Default:** 3000 <br/>
+
 ```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required**
 ```simulatedLatency``` Optional parameter that will simulate latency for message processing. Helpful for testing ```maxConsumerProcessTime``` functionality.
 
@@ -50,8 +52,9 @@ Consume message or messages from WonderQ queue.
 **function getWonderQStatus(messageOptions, callback)**
 ```messageOptions``` <object>
 Query state of a WonderQ hub 
-* wonderQHost <string> Host address of WonderQ hub **Default:** 127.0.0.1 
-* wonderQPort <number> Bound port of WonderQ hub **Default:** 3000 <br/>
+* ```wonderQHost``` <string> Host address of WonderQ hub **Default:** 127.0.0.1 
+* ```wonderQPort``` <number> Bound port of WonderQ hub **Default:** 3000 <br/>
+
 ```callback``` <function> Function that will be invoked on completion of WonderQ request. Callback should take two arguments data and error for handling successful and unsuccessful requests. **required**
 
 
